@@ -347,7 +347,9 @@ def printreport(results, tempfiles):
     numlevels = len(range(cfgRuns['minlevel'],cfgRuns['maxlevel']+1))
 
     # Print config info
-    print(f"\n Runs: {runs}")
+    print(f"\n")
+    print(f" Tool: {cfgRuns['testtool']}")
+    print(f" Runs: {runs}")
     print(f" Levels: {cfgRuns['minlevel']}-{cfgRuns['maxlevel']}")
     print(f" Trimworst: {cfgRuns['trimworst']}")
 
@@ -452,6 +454,8 @@ def benchmain():
     ''' Main benchmarking function '''
     global timefile, compfile, decompfile
 
+    print(f"Tool: {cfgRuns['testtool']}")
+
     # Prepare tempfiles
     timefile = os.path.join(cfgConfig['temp_path'], 'zlib-time.tmp')
     compfile = os.path.join(cfgConfig['temp_path'], 'zlib-testfil.gz')
@@ -541,6 +545,7 @@ def main():
     parser.add_argument('-g','--gen', help='Activate testmode "Generate".', action='store_true')
     parser.add_argument('-z','--minigzip', help='Use minigzip for testing.', action='store_true')
     parser.add_argument('-d','--minideflate', help='Use minideflate for testing.', action='store_true')
+    parser.add_argument('-l','--testtool', help='Path to test tool', action='store', default=None)
     parser.add_argument('--skipdecomp', help='Skip decompression benchmarks.', action='store_true')
     parser.add_argument('--skipverify', help='Skip verifying compressed files with system gzip.', action='store_true')
     args = parser.parse_args()
@@ -620,6 +625,9 @@ def main():
             print("Error, parameter '--minideflate' conflicts with parameter '--minigzip'")
             sys.exit(1)
         cfgRuns['testtool'] = 'minideflate'
+
+    if args.testtool:
+        cfgRuns['testtool'] = args.testtool
 
     if 'minigzip' not in cfgRuns['testtool'] and 'minideflate' not in cfgRuns['testtool']:
         print("Error, config file spesifies invalid testtool. Valid choices are 'minigzip' and 'minideflate'.")
