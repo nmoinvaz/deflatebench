@@ -79,7 +79,9 @@ def defconfig():
                             'minlevel': 0,
                             'maxlevel': 9,
                             'testmode': 'single',  # generate / multi / single
-                            'testtool': 'minigzip' } # minigzip / minideflate
+                            'testtool': 'minigzip',  # minigzip / minideflate
+                            'compress_tool': None,
+                            'decompress_tool': None }
 
     config['Config'] = {'temp_path': tempfile.gettempdir(),
                         'use_perf': True,
@@ -286,7 +288,12 @@ def runtest(tempfiles,level):
     starttime = time.perf_counter()
     testtool = os.path.realpath(cfgRuns['testtool'])
 
-    runcommand(f"{cmdprefix} {testtool} -{level} -c {testfile}", env=env, output=compfile)
+    if cfgRuns['compress_tool']:
+        compress_tool = os.path.realpath(cfgRuns['compress_tool'])
+    else:
+        compress_tool = testtool
+
+    runcommand(f"{cmdprefix} {compress_tool} -{level} -c {testfile}", env=env, output=compfile)
     if sys.platform != 'win32':
         comptime = parse_timefile(timefile)
     else:
@@ -294,10 +301,16 @@ def runtest(tempfiles,level):
     compsize = os.path.getsize(compfile)
 
     # Decompress
+
+    if cfgRuns['decompress_tool']:
+        decompress_tool = os.path.realpath(cfgRuns['decompress_tool'])
+    else:
+        decompress_tool = testtool
+
     if not cfgConfig['skipdecomp'] or not cfgConfig['skipverify']:
         printnn('d')
         starttime = time.perf_counter()
-        runcommand(f"{cmdprefix} {testtool} -d -c {compfile}", env=env, output=decompfile)
+        runcommand(f"{cmdprefix} {decompress_tool} -d -c {compfile}", env=env, output=decompfile)
 
         if sys.platform != 'win32':
             decomptime = parse_timefile(timefile)
@@ -355,7 +368,12 @@ def printreport(results, tempfiles):
 
     # Print config info
     print(f"\n")
-    print(f" Tool: {cfgRuns['testtool']}")
+    if cfgRuns['compress_tool']:
+        print(f" Compress Tool: {cfgRuns['compress_tool']}")
+    if cfgRuns['decompress_tool']:
+        print(f" Decompress Tool: {cfgRuns['decompress_tool']}")
+    if not cfgRuns['compress_tool'] and not cfgRuns['decompress_tool']:
+        print(f" Tool: {cfgRuns['testtool']}")
     print(f" Runs: {runs}")
     print(f" Levels: {cfgRuns['minlevel']}-{cfgRuns['maxlevel']}")
     print(f" Trimworst: {cfgRuns['trimworst']}")
@@ -628,14 +646,6 @@ def main():
 
     if args.testtool:
         cfgRuns['testtool'] = args.testtool
-
-    if 'minigzip' not in cfgRuns['testtool'] and 'minideflate' not in cfgRuns['testtool']:
-        print("Error, config file spesifies invalid testtool. Valid choices are 'minigzip' and 'minideflate'.")
-        sys.exit(1)
-
-    if not os.path.isfile( os.path.join( os.getcwd(), cfgRuns['testtool']) ):
-        print(f"Error, unable to find '{cfgRuns['testtool']}' in current directory, did you forget to compile?")
-        sys.exit(1)
 
     if args.skipdecomp:
         cfgConfig['skipdecomp'] = True
